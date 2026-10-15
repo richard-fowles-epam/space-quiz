@@ -51,7 +51,7 @@
       -webkit-font-smoothing: antialiased;
     }
     button { font: inherit; }
-    button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+    button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
     [hidden] { display: none !important; }
     .shell { width: min(100% - 40px, 520px); margin: 0 auto; }
     header { display: flex; align-items: center; justify-content: space-between; padding: 30px 0 22px; }
@@ -142,6 +142,17 @@
     .result-score .small-label { color: var(--muted); font-size: 9px; margin-top: 6px; }
     .result-stats { display: flex; justify-content: center; gap: 28px; padding: 15px 0; margin-bottom: 21px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
     .result-stats strong { color: var(--text); }
+    .review { text-align: left; font-size: 14px; overflow-wrap: anywhere; }
+    .review summary { cursor: pointer; color: var(--accent); font-weight: 650; border-radius: 3px; }
+    .review-list { margin: 18px 0 0; padding-left: 24px; }
+    .review-list li { padding: 0 0 16px 4px; }
+    .review-list li + li { padding-top: 16px; border-top: 1px solid var(--line); }
+    .review-list h3 { margin: 0 0 10px; font-size: 15px; line-height: 1.5; }
+    .review-list p { margin: 8px 0 0; }
+    .review-answer { padding: 8px 10px; border-radius: 7px; }
+    .review-answer.selected { color: var(--red); background: var(--red-bg); }
+    .review-answer.correct { color: var(--green); background: var(--green-bg); }
+    .all-correct { color: var(--green); background: var(--green-bg); border-radius: 11px; padding: 13px 15px; font-size: 14px; }
     .enter { animation: rise .35s ease both; }
     @keyframes float { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-7px) rotate(2deg); } }
     @keyframes twinkle { from { opacity: .35; } to { opacity: 1; } }
@@ -226,6 +237,11 @@
           <p class="result-copy" id="result-copy"></p>
           <div class="result-score" id="result-ring"><div class="result-score-inner"><div class="result-number" id="result-number"></div><div class="small-label">Final score</div></div></div>
           <div class="result-stats"><span><strong id="correct-total"></strong> correct</span><span><strong id="wrong-total"></strong> to discover</span></div>
+          <details class="review" id="review" hidden>
+            <summary id="review-summary">Review missed answers</summary>
+            <ol class="review-list" id="review-list"></ol>
+          </details>
+          <p class="all-correct" id="all-correct" hidden>All answers correct</p>
           <button class="next" id="restart">Explore again <span aria-hidden="true">&rarr;</span></button>
           <p class="hint">The universe always rewards a curious mind.</p>
         </div>
@@ -251,6 +267,7 @@
     let current = 0;
     let score = 0;
     let answered = false;
+    let selections = [];
 
     function renderQuestion(focus = false) {
       const item = questions[current];
@@ -281,6 +298,7 @@
     function choose(index) {
       if (answered) return;
       answered = true;
+      selections[current] = index;
       const item = questions[current];
       const isCorrect = index === item.correct;
       if (isCorrect) score++;
@@ -328,6 +346,32 @@
       $("result-ring").style.setProperty("--angle", `${score * 36}deg`);
       $("correct-total").textContent = score;
       $("wrong-total").textContent = 10 - score;
+      $("review").open = false;
+      $("review-list").replaceChildren();
+      questions.forEach((item, index) => {
+        const selected = selections[index];
+        if (selected === item.correct) return;
+        const entry = document.createElement("li");
+        entry.value = index + 1;
+        const heading = document.createElement("h3");
+        heading.textContent = item.question;
+        const playerAnswer = document.createElement("p");
+        playerAnswer.className = "review-answer selected";
+        playerAnswer.innerHTML = "<strong>Your answer (incorrect): </strong><span></span>";
+        playerAnswer.lastElementChild.textContent = item.answers[selected];
+        const correctAnswer = document.createElement("p");
+        correctAnswer.className = "review-answer correct";
+        correctAnswer.innerHTML = "<strong>Correct answer: </strong><span></span>";
+        correctAnswer.lastElementChild.textContent = item.answers[item.correct];
+        const fact = document.createElement("p");
+        fact.textContent = item.fact;
+        entry.append(heading, playerAnswer, correctAnswer, fact);
+        $("review-list").append(entry);
+      });
+      const missed = $("review-list").children.length;
+      $("review-summary").textContent = `Review missed answers (${missed})`;
+      $("review").hidden = missed === 0;
+      $("all-correct").hidden = missed !== 0;
       $("result-title").focus({ preventScroll: true });
     }
 
@@ -339,6 +383,11 @@
     $("restart").addEventListener("click", () => {
       current = 0;
       score = 0;
+      selections = [];
+      $("review").open = false;
+      $("review").hidden = true;
+      $("review-list").replaceChildren();
+      $("all-correct").hidden = true;
       $("result").hidden = true;
       $("quiz").hidden = false;
       $("fill").style.transform = "scaleX(0)";
