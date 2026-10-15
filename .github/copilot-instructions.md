@@ -25,6 +25,13 @@ For a full browser smoke test:
   emoji reaction, results-heading focus, and replay resetting score and progress.
   Numeric answer keys must do nothing on the results screen.
 - Check both color schemes, a narrow viewport, and reduced-motion preferences.
+- Finish a mixed attempt and use Tab/Shift+Tab and Enter/Space to toggle
+  "Review missed answers". Check the count, question order, selected and correct
+  answers, and facts; correct questions must be excluded. Toggling must not change
+  the score, progress, or reaction. Check all ten entries at 0/10 and the
+  "All answers correct" message with no disclosure at 10/10.
+- Replay with different misses and confirm the previous review is cleared,
+  the disclosure starts closed, and only the new attempt's misses appear.
 
 The current all-correct numeric-key sequence is `2, 3, 4, 1, 3, 2, 3, 4, 1, 2`.
 Result reactions change at scores 4, 7, and 10.
@@ -34,11 +41,13 @@ Result reactions change at scores 4, 7, and 10.
 `index.html` is the complete application: inline CSS, semantic HTML, inline SVG
 artwork, and a plain JavaScript script at the end of the body.
 
-The quiz uses in-memory state (`current`, `score`, `answered`).
+The quiz uses in-memory state (`current`, `score`, `answered`, `selections`).
 `renderQuestion()` recreates answer buttons and clears feedback;
 `choose(index)` is the shared mouse/keyboard answer path, locks the question,
 updates score/progress, and displays feedback; `showResults()` switches from
-`#quiz` to `#result`. Replay resets state before rendering the first question.
+`#quiz` to `#result` and builds a native disclosure from the current attempt's
+missed selections and existing question data. Replay clears selections and review
+content and resets state before rendering the first question.
 Reloading discards all progress.
 
 Question records contain `category`, `question`, four `answers`, a zero-based
